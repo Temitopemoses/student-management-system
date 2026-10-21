@@ -1,0 +1,150 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum Role {
+  ADMIN
+  INSTRUCTOR
+}
+
+enum StudentStatus {
+  ACTIVE
+  INACTIVE
+  ARCHIVED
+}
+
+enum CourseStatus {
+  DRAFT
+  ACTIVE
+  COMPLETED
+  ARCHIVED
+}
+
+enum EnrolmentStatus {
+  ENROLLED
+  COMPLETED
+  WITHDRAWN
+}
+
+enum AttendanceStatus {
+  PRESENT
+  ABSENT
+  LATE
+  EXCUSED
+}
+
+model User {
+  id           String        @id @default(uuid())
+  email        String        @unique
+  passwordHash String
+  firstName    String
+  lastName     String
+  role         Role          @default(INSTRUCTOR)
+  isActive     Boolean       @default(true)
+  courses      Course[]      @relation("CourseInstructor")
+  attendances  Attendance[]  @relation("RecordedAttendance")
+  activities   ActivityLog[]
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  @@index([role])
+}
+
+model Student {
+  id              String        @id @default(uuid())
+  studentNumber   String        @unique
+  firstName       String
+  lastName        String
+  email           String?       @unique
+  phone           String?
+  dateOfBirth     DateTime?
+  gender          String?
+  address         String?
+  status          StudentStatus @default(ACTIVE)
+  profileImageUrl String?
+  enrolments      Enrolment[]
+  attendances     Attendance[]
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  @@index([status])
+  @@index([studentNumber])
+}
+
+model Course {
+  id           String        @id @default(uuid())
+  code         String        @unique
+  title        String
+  description  String?
+  instructorId String?
+  instructor   User?         @relation("CourseInstructor", fields: [instructorId], references: [id], onDelete: SetNull)
+  startDate    DateTime
+  endDate      DateTime?
+  capacity     Int?
+  status       CourseStatus  @default(DRAFT)
+  enrolments   Enrolment[]
+  attendances  Attendance[]
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  @@index([status])
+  @@index([instructorId])
+}
+
+model Enrolment {
+  id          String          @id @default(uuid())
+  studentId   String
+  student     Student         @relation(fields: [studentId], references: [id], onDelete: Restrict)
+  courseId    String
+  course      Course          @relation(fields: [courseId], references: [id], onDelete: Restrict)
+  enrolledAt  DateTime        @default(now())
+  status      EnrolmentStatus @default(ENROLLED)
+  notes       String?
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+
+  @@unique([studentId, courseId])
+  @@index([studentId])
+  @@index([courseId])
+  @@index([status])
+}
+
+model Attendance {
+  id           String           @id @default(uuid())
+  studentId    String
+  student      Student          @relation(fields: [studentId], references: [id], onDelete: Restrict)
+  courseId     String
+  course       Course           @relation(fields: [courseId], references: [id], onDelete: Restrict)
+  recordedById String
+  recordedBy   User             @relation("RecordedAttendance", fields: [recordedById], references: [id], onDelete: Restrict)
+  date         DateTime         @db.Date
+  status       AttendanceStatus
+  notes        String?
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+
+  @@unique([studentId, courseId, date])
+  @@index([courseId, date])
+  @@index([studentId])
+}
+
+model ActivityLog {
+  id         String   @id @default(uuid())
+  userId     String?
+  user       User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  action     String
+  entityType String
+  entityId   String
+  metadata   Json?
+  ipAddress  String?
+  createdAt  DateTime @default(now())
+
+  @@index([userId])
+  @@index([entityType, entityId])
+  @@index([createdAt])
+}

@@ -1,0 +1,11 @@
+{
+  "name": "sms-root",
+  "version": "1.0.0",
+  "description": "Student Management System - Full Stack Application",
+  "private": true,
+  "scripts": {
+    "dev:backend": "npm --prefix backend run dev",
+    "dev:frontend": "npm --prefix frontend run dev",
+    "build:frontend": "npm --prefix frontend run build"
+  }
+}
